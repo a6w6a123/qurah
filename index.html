@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة اختيار اسم عشوائي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tagify/4.2.0/tagify.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            direction: rtl;
+            background-color: #f0f8ff;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            display: none;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        input, button {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 80%;
+        }
+        button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #resultsTable, #namesTable {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #resultsTable th, #resultsTable td, #namesTable th, #namesTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        #resultsTable th, #namesTable th {
+            background-color: #4caf50;
+            color: white;
+        }
+        #numberInputContainer {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <button onclick="showPage('settingsPage')">لوحة التحكم</button>
+        <button onclick="openGamePage()">لعب</button>
+        <button onclick="showPage('endPage')">صفحة النهاية</button>
+    </div>
+
+    <!-- لوحة التحكم -->
+    <div class="container" id="settingsPage">
+        <h1>إعدادات اللعبة</h1>
+        <label for="gameTitleInput">عنوان اللعبة:</label>
+        <input type="text" id="gameTitleInput" placeholder="أدخل عنوان اللعبة" oninput="updateGameTitle()"><br>
+
+        <label for="namesInput">الأسماء:</label>
+        <input type="text" id="namesInput" placeholder="أدخل الأسماء (افصلها بـ ,)" onkeydown="if(event.key === 'Enter'){ addName(); }"><br>
+        <button onclick="addName()">إضافة الأسماء</button>
+
+        <h2>الأسماء المدخلة</h2>
+        <table id="namesTable">
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>إجراء</th>
+                </tr>
+            </thead>
+            <tbody id="namesTableBody"></tbody>
+        </table>
+
+        <h2>نتائج اللعبة</h2>
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>الاسم</th>
+                    <th>المبلغ</th>
+                    <th>الرقم</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="resultsTableBody"></tbody>
+        </table>
+        <button onclick="printResults()">طباعة النتائج</button>
+        <h2>نص نهاية اللعبة:</h2>
+        <textarea id="endMessageInput" placeholder="أدخل نص نهاية اللعبة" oninput="localStorage.setItem('endMessage', this.value)"></textarea>
+        
+        <h2>رابط مشاهدة اللعبة:</h2>
+        <input type="datetime-local" id="linkDateTime" placeholder="تاريخ ووقت فتح اللعبة">
+        <button onclick="generateGameLink()">إنشاء رابط لمشاهدة اللعبة</button>
+        <a href="#" id="viewGameLink" style="display:none;">انقر هنا لمشاهدة اللعبة</a>
+    </div>
+
+    <!-- صفحة النهاية -->
+    <div class="container" id="endPage">
+        <h1>انتهت الأسماء!</h1>
+        <h2 id="finalMessage"></h2>
+        <button onclick="showPage('settingsPage')">العودة للوحة التحكم</button>
+    </div>
+
+    <audio id="countdownSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+
+    <script>
+        let remainingNames = JSON.parse(localStorage.getItem('remainingNames')) || [];
+        const savedData = JSON.parse(localStorage.getItem('savedData')) || [];
+
+        // تحديث عنوان اللعبة
+        function updateGameTitle() {
+            const titleInput = document.getElementById("gameTitleInput").value;
+            localStorage.setItem('gameTitle', titleInput); // حفظ العنوان
+        }
+
+        // عرض الصفحة المحددة
+        function showPage(pageId) {
+            document.getElementById("settingsPage").style.display = "none";
+            document.getElementById("endPage").style.display = "none";
+            document.getElementById(pageId).style.display = "block";
+
+            if (pageId === 'endPage') {
+                document.getElementById("finalMessage").innerText = localStorage.getItem('endMessage') || "لا توجد رسالة.";
+            }
+        }
+
+        // إضافة اسم
+        function addName() {
+            const namesInput = document.getElementById("namesInput");
+            const names = namesInput.value.split(',').map(name => name.trim()).filter(name => name);
+            remainingNames.push(...names);
+            namesInput.value = ''; // مسح الحقل بعد الإضافة
+            localStorage.setItem('remainingNames', JSON.stringify(remainingNames));
+            updateNamesTable();
+        }
+
+        // تحديث الجدول الخاص بالأسماء
+        function updateNamesTable() {
+            const namesTableBody = document.getElementById("namesTableBody");
+            namesTableBody.innerHTML = ''; // مسح المحتوى السابق
+            remainingNames.forEach((name, index) => {
+                namesTableBody.innerHTML += `<tr><td>${name}</td><td><button onclick="removeName(${index})">حذف</button></td></tr>`;
+            });
+        }
+
+        // إزالة اسم
+        function removeName(index) {
+            remainingNames.splice(index, 1);
+            localStorage.setItem('remainingNames', JSON.stringify(remainingNames));
+            updateNamesTable();
+        }
+
+        // إنشاء رابط لمشاهدة اللعبة
+        function generateGameLink() {
+            const dateTime = document.getElementById("linkDateTime").value;
+            const title = localStorage.getItem('gameTitle') || "لعبة اختيار اسم عشوائي";
+
+            const link = `http://example.com/game.html?dateTime=${encodeURIComponent(dateTime)}&title=${encodeURIComponent(title)}`;
+            document.getElementById("viewGameLink").href = link;
+            document.getElementById("viewGameLink").style.display = "block";
+        }
+
+        // فتح صفحة اللعبة
+        function openGamePage() {
+            window.open('game.html', '_blank');
+        }
+
+        // عند تحميل الصفحة
+        window.onload = function() {
+            const storedNames = JSON.parse(localStorage.getItem('remainingNames'));
+            if (storedNames) remainingNames = storedNames;
+            const savedResults = JSON.parse(localStorage.getItem('savedData'));
+            if (savedResults) savedData.push(...savedResults);
+            updateNamesTable();
+        };
+    </script>
+</body>
+</html>

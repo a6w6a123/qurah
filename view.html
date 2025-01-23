@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رابط المشاهدة</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            direction: rtl;
+            background-color: #f0f8ff;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .result-container {
+            margin-top: 20px;
+        }
+        .result-card {
+            background-color: #FFA500;
+            color: white;
+            margin: 10px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .crossed-out {
+            text-decoration: line-through;
+            color: gray;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>نتائج اللعبة</h1>
+    <div class="result-container" id="resultContainer"></div>
+    <button onclick="clearResults()">مسح النتائج</button>
+
+    <script>
+        // عرض النتائج المحفوظة
+        function displayResults() {
+            const resultContainer = document.getElementById("resultContainer");
+            const savedResults = JSON.parse(localStorage.getItem('savedData')) || [];
+            resultContainer.innerHTML = ''; // مسح المحتوى السابق
+
+            if (savedResults.length === 0) {
+                resultContainer.innerHTML = '<p>لا توجد نتائج لعرضها.</p>';
+            } else {
+                savedResults.forEach(result => {
+                    const resultCard = document.createElement('div');
+                    resultCard.className = 'result-card';
+                    resultCard.innerHTML = `<p>الاسم: ${result.name}</p>
+                                            <p>الرقم: ${result.number}</p>
+                                            <p>المبلغ: ${result.amount}</p>`;
+                    resultContainer.appendChild(resultCard);
+                });
+            }
+        }
+
+        // مسح النتائج
+        function clearResults() {
+            localStorage.removeItem('savedData');
+            displayResults(); // تحديث العرض
+        }
+
+        // تحديث البيانات كل 5 ثواني
+        setInterval(displayResults, 5000);
+
+        // عند تحميل الصفحة
+        window.onload = function() {
+            displayResults(); // عرض النتائج عند التحميل
+        };
+    </script>
+</body>
+</html>

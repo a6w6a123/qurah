@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة اختيار اسم عشوائي</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            direction: rtl;
+            background-color: #f0f8ff;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .names-container, .numbers-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .card, .number-card {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 80px;
+            height: 80px;
+            margin: 10px;
+            background-color: #FFA500;
+            color: white;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .card:hover, .number-card:hover {
+            transform: scale(1.1);
+        }
+        .number-card {
+            background-color: #4caf50;
+        }
+        .selected-number {
+            background-color: #FF5733; /* تغيير اللون عند التحديد */
+        }
+        .chosen-name {
+            margin-top: 20px;
+            font-size: 24px;
+            color: #FF0000;
+        }
+        #numberInputContainer {
+            display: none;
+            margin-top: 20px;
+        }
+        .crossed-out {
+            text-decoration: line-through;
+            color: gray;
+        }
+        .countdown {
+            font-size: 24px;
+            color: #000;
+            margin-top: 20px;
+        }
+        input[type="number"], input[type="datetime-local"] {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <h1 id="gameTitle">لعبة اختيار اسم عشوائي</h1>
+    <div>
+        <label for="startDatetime">اختر تاريخ ووقت بدء اللعبة:</label>
+        <input type="datetime-local" id="startDatetime">
+        <button onclick="setGameStartTime()">تعيين</button>
+    </div>
+    <div class="names-container" id="namesContainer"></div>
+    <div class="countdown" id="countdown"></div>
+    <div id="numberInputContainer">
+        <h2>اختر رقم</h2>
+        <div class="numbers-container" id="numbersContainer"></div>
+        <input type="number" id="amountInput" placeholder="أدخل المبلغ">
+        <button id="saveButton" onclick="saveResult()">حفظ</button>
+    </div>
+    <h2 class="chosen-name" id="chosenName"></h2>
+    <button id="startButton" onclick="startGame()">ابدأ اللعبة</button>
+    <button id="generateLinkButton" onclick="generateViewLink()">إنشاء رابط المشاهدة</button>
+    <div id="viewLinkContainer" style="margin-top: 20px;"></div>
+
+    <script>
+        let remainingNames = JSON.parse(localStorage.getItem('remainingNames')) || [];
+        const gameTitle = localStorage.getItem('gameTitle') || "لعبة اختيار اسم عشوائي";
+        document.getElementById("gameTitle").innerText = gameTitle;
+
+        let countdownInterval;
+        let gameStartTime = null;
+
+        // تعيين وقت بدء اللعبة
+        function setGameStartTime() {
+            const datetimeInput = document.getElementById("startDatetime").value;
+            if (datetimeInput) {
+                const selectedDate = new Date(datetimeInput);
+                const currentDate = new Date();
+
+                if (selectedDate > currentDate) {
+                    gameStartTime = selectedDate;
+                    startCountdown(selectedDate);
+                } else {
+                    alert("التاريخ والوقت المحددين يجب أن يكونا في المستقبل!");
+                }
+            }
+        }
+
+        // بدء العد التنازلي
+        function startCountdown(selectedDate) {
+            const countdownDisplay = document.getElementById("countdown");
+            countdownDisplay.innerText = "";
+
+            countdownInterval = setInterval(() => {
+                const currentTime = new Date();
+                const timeDiff = selectedDate - currentTime;
+
+                if (timeDiff <= 0) {
+                    clearInterval(countdownInterval);
+                    startGame(); // بدء اللعبة عندما ينتهي العد التنازلي
+                } else {
+                    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+                    countdownDisplay.innerText = `الوقت المتبقي: ${seconds} ثواني`;
+                }
+            }, 1000);
+        }
+
+        // عرض الأسماء
+        function displayNames() {
+            const namesContainer = document.getElementById("namesContainer");
+            namesContainer.innerHTML = ''; // مسح المحتوى السابق
+            remainingNames.forEach(name => {
+                const nameCard = document.createElement('div');
+                nameCard.className = 'card';
+                nameCard.innerText = name;
+                namesContainer.appendChild(nameCard);
+            });
+        }
+
+        // بدء اللعبة
+        function startGame() {
+            if (remainingNames.length > 0) {
+                displayNames();
+                // بدء العد التنازلي
+                let countdownTime = 10;
+                document.getElementById("countdown").innerText = countdownTime;
+                const countdownInterval = setInterval(() => {
+                    countdownTime--;
+                    document.getElementById("countdown").innerText = countdownTime;
+
+                    if (countdownTime <= 0) {
+                        clearInterval(countdownInterval);
+                        // اختيار اسم عشوائي بعد انتهاء العد التنازلي
+                        const chosenIndex = Math.floor(Math.random() * remainingNames.length);
+                        const chosenName = remainingNames[chosenIndex];
+                        document.getElementById("chosenName").innerText = chosenName;
+                        remainingNames.splice(chosenIndex, 1); // حذف الاسم المختار من القائمة
+                        document.getElementById("numberInputContainer").style.display = "block"; // عرض حقل الأرقام
+                        generateNumberCards(); // توليد بطاقات الأرقام
+                    }
+                }, 1000);
+            }
+        }
+
+        // توليد بطاقات الأرقام
+        function generateNumberCards() {
+            const numbersContainer = document.getElementById("numbersContainer");
+            numbersContainer.innerHTML = ''; // مسح المحتوى السابق
+            const numberCount = Math.min(remainingNames.length + 1, 10); // تحديد الحد الأقصى للأرقام
+            for (let i = 1; i <= numberCount; i++) {
+                const numberCard = document.createElement('div');
+                numberCard.className = 'number-card';
+                numberCard.innerText = i;
+                numberCard.onclick = () => selectNumber(i);
+                numbersContainer.appendChild(numberCard);
+            }
+        }
+
+        // اختيار رقم
+        function selectNumber(selectedNumber) {
+            const numberCards = document.querySelectorAll('.number-card');
+            numberCards.forEach(card => {
+                card.classList.remove('selected-number');
+            });
+            const card = Array.from(numberCards).find(card => card.innerText == selectedNumber);
+            if (card) {
+                card.classList.add('selected-number');
+            }
+        }
+
+        // حفظ النتيجة
+        function saveResult() {
+            const chosenName = document.getElementById("chosenName").innerText;
+            const selectedNumber = document.querySelector('.selected-number');
+
+            if (selectedNumber) {
+                const amount = document.getElementById("amountInput").value;
+                const savedResults = JSON.parse(localStorage.getItem('savedData')) || [];
+                savedResults.push({ name: chosenName, number: selectedNumber.innerText, amount: amount });
+                localStorage.setItem('savedData', JSON.stringify(savedResults));
+
+                // شطب الاسم والرقم
+                document.getElementById("chosenName").classList.add('crossed-out');
+                selectedNumber.classList.add('crossed-out');
+
+                // إعادة تعيين الحقول
+                document.getElementById("amountInput").value = '';
+                document.getElementById("numberInputContainer").style.display = "none";
+                displayNames(); // إعادة عرض الأسماء بعد الحفظ
+            }
+        }
+
+        // إنشاء رابط المشاهدة
+        function generateViewLink() {
+            const link = window.location.origin + '/ve.html'; // رابط صفحة المشاهدة
+            document.getElementById("viewLinkContainer").innerHTML = `<p>رابط المشاهدة: <a href="${link}" target="_blank">${link}</a></p>`;
+        }
+
+        // عند تحميل الصفحة
+        window.onload = function() {
+            const storedNames = JSON.parse(localStorage.getItem('remainingNames'));
+            if (storedNames) remainingNames = storedNames;
+            displayNames(); // عرض الأسماء عند التحميل
+        };
+    </script>
+</body>
+</html>
